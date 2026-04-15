@@ -1,32 +1,51 @@
 #include "ap.h"
 #include "bsp.h"
 #include "cli.h"
+#include "cmsis_os.h"
+#include "cmsis_os2.h"
+#include "led.h"
 #include "my_gpio.h"
 #include "stm32f411xe.h"
 #include "stm32f4xx_hal.h"
 #include <ctype.h>
 
-
-void cliLed(uint8_t argc, char **argv) {
-  if (argc == 2) {
-    if (strcmp(argv[1], "on") == 0) {
-      ledOn();
-      cliPrintf("LED ON\r\n");
-    } else if (strcmp(argv[1], "off") == 0) {
-      ledOff();
-      cliPrintf("LED OFF\r\n");
-    } else if (strcmp(argv[1], "toggle") == 0) {
-      ledToggle();
-      cliPrintf("LED TOGGLE\r\n");
+static uint32_t led_toggle_period = 0;
+void cliLed(uint8_t argc, char **argv)
+{
+    if (argc >= 2) {
+        if (strcmp(argv[1], "on") == 0) {
+            led_toggle_period = 0;
+            ledOn();
+            cliPrintf("LED ON\r\n");
+        } else if (strcmp(argv[1], "off") == 0) {
+            led_toggle_period = 0;
+            ledOff();
+            cliPrintf("LED OFF\r\n");
+        } else if (strcmp(argv[1], "toggle") == 0) {
+            if(argc == 3){
+                led_toggle_period=atoi(argv[2]);
+                if(led_toggle_period>0){
+                    cliPrintf("LED Auto-Toggled!!\r\n");
+                }else{
+                    cliPrintf("Invalid Period\r\n");
+                }
+            }else{
+                led_toggle_period = 0;
+                ledToggle();
+                cliPrintf("LED TOGGLE\r\n");
+            }
+            
+        } else {
+            cliPrintf("Invalid Command\r\n");
+        }
     } else {
-      cliPrintf("Invalid Command\r\n");
+        cliPrintf("Usage: led [on|off|toggle]\r\n");
+        cliPrintf("Usage: led toggle [period]\r\n");
     }
-  } else {
-    cliPrintf("Usage: led [on|off|toggle]\r\n");
-  }
 }
 
-void cliInfo(uint8_t argc, char **argv) {
+void cliInfo(uint8_t argc, char **argv)
+{
   if (argc == 1) {
     uint32_t uid0 = HAL_GetUIDw0();
     uint32_t uid1 = HAL_GetUIDw1();
@@ -52,7 +71,8 @@ void cliInfo(uint8_t argc, char **argv) {
   }
 }
 
-void cliSys(uint8_t argc, char **argv) {
+void cliSys(uint8_t argc, char **argv)
+{
   if (argc == 2 && strcmp(argv[1], "reset") == 0) {
     NVIC_SystemReset();
   } else {
@@ -60,9 +80,10 @@ void cliSys(uint8_t argc, char **argv) {
   }
 }
 
-// argv[1] : "read" "write"
-// argb[2] : pin A5, B12
-void cliGpio(uint8_t argc, char **argv) {
+void cliGpio(uint8_t argc, char **argv)
+{
+    // argv[1] : "read" "write"
+    // argb[2] : pin A5, B12
   if (argc >= 3) {
     char port_char = tolower(argv[2][0]);
     int pin_num = atoi(&argv[2][1]); //?
@@ -92,7 +113,8 @@ void cliGpio(uint8_t argc, char **argv) {
   }
 }
 
-static bool isSafeAddress(uint32_t addr){
+static bool isSafeAddress(uint32_t addr)
+{
     //1. f411 flash
     if(0x08000000 <= addr && addr <= 0x0807FFFF) return true;
     //2. f411 ram
@@ -105,7 +127,8 @@ static bool isSafeAddress(uint32_t addr){
     return false;
 }
 
-void cliMd(uint8_t argc, char **argv) {
+void cliMd(uint8_t argc, char **argv)
+{
   // md 0x8000-0000 32
   if (argc >= 2) {
     uint32_t addr = strtoul(argv[1], NULL, 16);
@@ -153,7 +176,8 @@ void cliMd(uint8_t argc, char **argv) {
 }
 
 //button on/off == enable/disable
-void cliButton(uint8_t argc, char **argv){
+void cliButton(uint8_t argc, char **argv)
+{
     if(argc == 2){
         if(strcmp(argv[1], "on") == 0){
             buttonEnable(true);
@@ -178,9 +202,33 @@ void apInit(void) {
   cliAdd("button", cliButton);
 }
 
+void ledSystemTask(void *argument)
+{
+    while (1){
+        if(led_toggle_period > 0){
+            ledToggle();
+            osDelay(led_toggle_period);
+            //vTaskDelay(1000); // HALdelay는 시스템 전체를 멈추고 싶을 때
+        }else{
+            osDelay(50); //cmsis 함수를 가급적 사용하려고
+        }
+    }
+}
+
 void apMain(void) {
-  uartPrintf(0, "hello world \r\n");
-  while (1) {
+    //osThreadId_t ledSystemTaskHandle;
+    // const osThreadAttr_t ledSystemTask_attributes = {
+    //     .name = "ledSystemTask",
+    //     .stack_size = 128 * 4,
+    //     .priority = (osPriority_t) osPriorityNormal,
+    // };
+    // //ledSystemTaskHandle = osThreadNew(ledSystemTask, NULL, &ledSystemTask_attributes);
+    // osThreadNew(ledSystemTask, NULL, &ledSystemTask_attributes);
+    
+    uartPrintf(0, "hello world \r\n");
+    uartPrintf(0, "LED Task Started!! \r\n");
+    
+    while (1) {
 
     // HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
     // ledOff();
@@ -198,6 +246,7 @@ void apMain(void) {
     //}
     // HAL_Delay(500);
 
-    cliMain();
-  }
+        cliMain();
+        osDelay(1); //task 시간을 양보
+    }
 }

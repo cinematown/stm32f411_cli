@@ -91,9 +91,9 @@ int main(void)
   MX_GPIO_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-  #include "ap.h"
-  apInit();
-  apMain();
+  // #include "ap.h"
+  // apInit();
+  // apMain(); ->StartDefaulTask로 옮김, apmain에서 while문 루프 발생되므로
   /* USER CODE END 2 */
 
   /* Init scheduler */

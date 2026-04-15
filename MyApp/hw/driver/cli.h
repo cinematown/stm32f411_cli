@@ -10,6 +10,7 @@ void cliParseArgs(char* Line_buf);
 bool cliAdd(const char* cmd_str, void(*cmd_func)(uint8_t argc, char* argv[]));
 void cliRunCommand();
 void cliMain();
+void cliMain_();
 
 
 #endif
