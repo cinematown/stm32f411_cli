@@ -1,5 +1,6 @@
 #include "cli.h"
 #include "uart.h"
+#include "cmsis_os2.h"
 #include <stdint.h>
 #include <string.h>
 #include <stdarg.h>
@@ -120,33 +121,39 @@ static void processAnsiEscape(uint8_t rx_data)
 
 void cliMain(void)
 {
-    if(uartAvailable(0)==0) return;
+    // if(uartAvailable(0)==0) return;
+    // uint8_t rx_data = uartRead(0);
+    uint8_t rx_data;
 
-    uint8_t rx_data = uartRead(0);
-    if(input_state!=CLI_STATE_NORMAL)
+    //인터럽트가 발생해야 넘어감, CPU 부하를 줄임
+    if(uartReadBlock(0, &rx_data, osWaitForever) == true)
     {
-        processAnsiEscape(rx_data);
-        return;
-    }
+        if(input_state!=CLI_STATE_NORMAL)
+        {
+            processAnsiEscape(rx_data);
+            return;
+        }
 
-    switch (rx_data)
-    {
-        case 0x1B: //esc
-            input_state = CLI_STATE_ESC_RCVD;
-            break;
-        case '\r':
-        case '\n':
-            handleEnterKey();
-            break;
-        case '\b': //backspace
-        case 127:
-            handleBackspace();
-            break;
-        default:
-            if(32<=rx_data && rx_data<=126)
-                handleCharInsert(rx_data);
-            break;
+        switch (rx_data)
+        {
+            case 0x1B: //esc
+                input_state = CLI_STATE_ESC_RCVD;
+                break;
+            case '\r':
+            case '\n':
+                handleEnterKey();
+                break;
+            case '\b': //backspace
+            case 127:
+                handleBackspace();
+                break;
+            default:
+                if(32<=rx_data && rx_data<=126)
+                    handleCharInsert(rx_data);
+                break;
+        }
     }
+    
 }
 
 void cliMain_()
