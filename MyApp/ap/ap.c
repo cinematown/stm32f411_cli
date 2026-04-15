@@ -152,6 +152,22 @@ void cliMd(uint8_t argc, char **argv) {
   }
 }
 
+//button on/off == enable/disable
+void cliButton(uint8_t argc, char **argv){
+    if(argc == 2){
+        if(strcmp(argv[1], "on") == 0){
+            buttonEnable(true);
+            cliPrintf("Button Interrupt Report: ON\r\n");
+        }else if(strcmp(argv[1], "off") == 0){
+            buttonEnable(false);
+            cliPrintf("Button Interrupt Report: OFF\r\n");
+        }
+    }else{
+        cliPrintf("Usage Button on|off\r\n");
+        cliPrintf("Current Status: %s\r\n", buttonGetEnable()? "enable" : "disable");
+    }
+}
+
 void apInit(void) {
   hwInit();
   cliAdd("led", cliLed);
@@ -159,6 +175,7 @@ void apInit(void) {
   cliAdd("sys", cliSys);
   cliAdd("gpio", cliGpio);
   cliAdd("md", cliMd);
+  cliAdd("button", cliButton);
 }
 
 void apMain(void) {
