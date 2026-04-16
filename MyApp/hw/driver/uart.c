@@ -1,15 +1,10 @@
 #include "uart.h"
-#include "cmsis_os2.h"
-#include "stm32f4xx_hal_uart.h"
-#include <stdarg.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
 
 //extern UART_HandleTypeDef huart2;
 
 //메시지큐
 static osMessageQueueId_t uart_rx_q = NULL;
+static osMutexId_t uart_tx_mutex = NULL;
 
 #define TIMEOUT 1000
 
@@ -23,11 +18,16 @@ static uint8_t rx_data;
 
 bool uartInit(void)
 {
-    if(uart_rx_q==NULL)
+    if(uart_rx_q==NULL){
         uart_rx_q = osMessageQueueNew(UART_RX_BUF_LENGTH, sizeof(uint8_t), 0);
+    }
+    
+    if(uart_tx_mutex==NULL){
+        uart_tx_mutex = osMutexNew(NULL);
+    }
+    
     bool ret = uartOpen(0,9600);
     HAL_UART_Receive_IT(&huart2, &rx_data, 1);    
-    //return uartOpen(0,9600);
     return ret;
 }
 

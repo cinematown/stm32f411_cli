@@ -1,7 +1,5 @@
 #include "my_gpio.h"
-#include "stm32f411xe.h"
-#include "stm32f4xx_hal_gpio.h"
-#include "stm32f4xx_hal_rcc.h"
+
 
 static GPIO_TypeDef* getPortPtr(uint8_t port_idx)
 {

@@ -1,16 +1,9 @@
 #include "ap.h"
-#include "bsp.h"
 #include "cli.h"
-#include "cmsis_os.h"
-#include "cmsis_os2.h"
-#include "led.h"
-#include "my_gpio.h"
-#include "stm32f411xe.h"
-#include "stm32f4xx_hal.h"
-#include <ctype.h>
 
 static uint32_t led_toggle_period = 0;
 static uint32_t temp_read_period = 0;
+
 void cliLed(uint8_t argc, char **argv)
 {
     if (argc >= 2) {
@@ -196,11 +189,25 @@ void cliButton(uint8_t argc, char **argv)
 void cliTemp(uint8_t argc, char **argv)
 {
   if(argc==1){
+    if(temp_read_period>0){
+      tempStopAuto();
+    }
     temp_read_period = 0;
-    cliPrintf("Temperature: %0.2f ^C\r\n", tempRead());
+    cliPrintf("Temperature: %.2f *C\r\n", tempReadSingle());
+
   }else if(argc==2){
-    cliPrintf("Temperature Auto Read Start\r\n");
-    temp_read_period = atoi(argv[1]);
+
+    int period = atoi(argv[1]);
+    if(period>0){
+      tempStartAuto();
+      temp_read_period = period;
+      cliPrintf("Temperature Auto Read Start\r\n");
+
+    }else{
+      tempStopAuto();
+      cliPrintf("Invalid Period\r\n");
+    }
+
   }else{
     cliPrintf("Usage: temp\r\n");
     cliPrintf("Usage: temp [period]\r\n");
@@ -224,7 +231,7 @@ void tempSystemTask(void *argument)
 {
   while(1){
     if(temp_read_period > 0){
-      cliPrintf("Temperature: %0.2f ^C\r\n", tempRead());
+      cliPrintf("Temperature: %.2f *C\r\n", tempReadAuto());
       osDelay(temp_read_period);
     }else{
       osDelay(50);
@@ -232,6 +239,17 @@ void tempSystemTask(void *argument)
   }
 }
 
+void StartDefaultTask(void *argument)
+{
+  //cubemx 쪽 코드를 수정하지 않아도됨
+  //_weak를 이용해서 thread 로직을 ap.c로 모두 이동 
+  apInit();
+  for(;;)
+  {
+    apMain();
+    //osDelay(1); ???
+  }
+}
 
 void apInit(void) {
   hwInit();

@@ -7,6 +7,7 @@
 #include "my_gpio.h"
 #include "button.h"
 #include "temp.h"
+#include "cli.h"
 
 void hwInit(void);
 

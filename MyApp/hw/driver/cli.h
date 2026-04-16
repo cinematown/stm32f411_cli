@@ -2,6 +2,7 @@
 #define __HW_DRIVER_CLI_H__
 
 #include "hw_def.h"
+#include "def.h"
 
 void cliInit();
 void cliPrintf(const char *fmt, ...);

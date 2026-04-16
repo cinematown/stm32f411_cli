@@ -3,8 +3,11 @@
 
 #include "hw_def.h"
 
-bool tempInit();
-float tempRead();
 
+bool tempInit();
+float tempReadAuto();
+float tempReadSingle();
+void tempStartAuto();
+void tempStopAuto();
 
 #endif

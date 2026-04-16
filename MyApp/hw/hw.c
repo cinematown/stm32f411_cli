@@ -1,5 +1,4 @@
 #include "hw.h"
-#include "driver/button.h"
 
 void hwInit(void)
 {
@@ -8,5 +7,4 @@ void hwInit(void)
     cliInit();
     buttonInit();
     tempInit();
-    //uartOpen(0, 9600);
 }

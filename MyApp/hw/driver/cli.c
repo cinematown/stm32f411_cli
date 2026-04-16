@@ -1,10 +1,5 @@
 #include "cli.h"
 #include "uart.h"
-#include "cmsis_os2.h"
-#include <stdint.h>
-#include <string.h>
-#include <stdarg.h>
-#include <stdio.h>
 
 #define CLI_LINE_BUF_MAX 32
 #define CLI_CMD_LIST_MAX 32
