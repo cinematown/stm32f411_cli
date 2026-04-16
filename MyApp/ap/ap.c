@@ -10,6 +10,7 @@
 #include <ctype.h>
 
 static uint32_t led_toggle_period = 0;
+static uint32_t temp_read_period = 0;
 void cliLed(uint8_t argc, char **argv)
 {
     if (argc >= 2) {
@@ -192,6 +193,46 @@ void cliButton(uint8_t argc, char **argv)
     }
 }
 
+void cliTemp(uint8_t argc, char **argv)
+{
+  if(argc==1){
+    temp_read_period = 0;
+    cliPrintf("Temperature: %0.2f ^C\r\n", tempRead());
+  }else if(argc==2){
+    cliPrintf("Temperature Auto Read Start\r\n");
+    temp_read_period = atoi(argv[1]);
+  }else{
+    cliPrintf("Usage: temp\r\n");
+    cliPrintf("Usage: temp [period]\r\n");
+  }
+}
+
+void ledSystemTask(void *argument)
+{
+  while (1){
+    if(led_toggle_period > 0){
+      ledToggle();
+      osDelay(led_toggle_period);
+      //vTaskDelay(1000); // HALdelay는 시스템 전체를 멈추고 싶을 때
+    }else{
+      osDelay(50); //cmsis 함수를 가급적 사용하려고
+    }
+  }
+}
+
+void tempSystemTask(void *argument)
+{
+  while(1){
+    if(temp_read_period > 0){
+      cliPrintf("Temperature: %0.2f ^C\r\n", tempRead());
+      osDelay(temp_read_period);
+    }else{
+      osDelay(50);
+    }
+  }
+}
+
+
 void apInit(void) {
   hwInit();
   cliAdd("led", cliLed);
@@ -200,19 +241,7 @@ void apInit(void) {
   cliAdd("gpio", cliGpio);
   cliAdd("md", cliMd);
   cliAdd("button", cliButton);
-}
-
-void ledSystemTask(void *argument)
-{
-    while (1){
-        if(led_toggle_period > 0){
-            ledToggle();
-            osDelay(led_toggle_period);
-            //vTaskDelay(1000); // HALdelay는 시스템 전체를 멈추고 싶을 때
-        }else{
-            osDelay(50); //cmsis 함수를 가급적 사용하려고
-        }
-    }
+  cliAdd("temp", cliTemp);
 }
 
 void apMain(void) {
@@ -225,7 +254,6 @@ void apMain(void) {
     // //ledSystemTaskHandle = osThreadNew(ledSystemTask, NULL, &ledSystemTask_attributes);
     // osThreadNew(ledSystemTask, NULL, &ledSystemTask_attributes);
     
-    uartPrintf(0, "hello world \r\n");
     uartPrintf(0, "LED Task Started!! \r\n");
     
     while (1) {
