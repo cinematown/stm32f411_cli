@@ -8,6 +8,7 @@
 #include "button.h"
 #include "temp.h"
 #include "cli.h"
+#include "log.h"
 
 void hwInit(void);
 

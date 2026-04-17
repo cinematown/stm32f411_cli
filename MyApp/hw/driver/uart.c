@@ -1,4 +1,5 @@
 #include "uart.h"
+#include "cmsis_os2.h"
 
 //extern UART_HandleTypeDef huart2;
 
@@ -25,7 +26,7 @@ bool uartInit(void)
     if(uart_tx_mutex==NULL){
         uart_tx_mutex = osMutexNew(NULL);
     }
-    
+
     bool ret = uartOpen(0,9600);
     HAL_UART_Receive_IT(&huart2, &rx_data, 1);    
     return ret;
@@ -112,11 +113,19 @@ bool uartClose(uint8_t ch)
 
 uint32_t uartWrite(uint8_t ch, uint8_t *p_data, uint32_t len)
 {
-   if( HAL_UART_Transmit(&huart2, p_data, len, TIMEOUT) == HAL_OK ){
-        return len;
-   }
+    if(uart_tx_mutex==NULL) return 0;
+    
+    osMutexAcquire(uart_tx_mutex, osWaitForever);
+    
+    if( HAL_UART_Transmit(&huart2, p_data, len, TIMEOUT) == HAL_OK )
+    {
+    }else{
+        len=0;
+    }
+    osMutexRelease(uart_tx_mutex);
 
-   return 0;
+    //*** osSemaphore() 작업을 동시 세개까지 허용
+    return len;
 }
 
 

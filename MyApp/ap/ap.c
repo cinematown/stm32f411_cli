@@ -1,8 +1,10 @@
 #include "ap.h"
 #include "cli.h"
+#include "led.h"
 
 static uint32_t led_toggle_period = 0;
 static uint32_t temp_read_period = 0;
+
 
 void cliLed(uint8_t argc, char **argv)
 {
@@ -10,18 +12,22 @@ void cliLed(uint8_t argc, char **argv)
         if (strcmp(argv[1], "on") == 0) {
             led_toggle_period = 0;
             ledOn();
-            cliPrintf("LED ON\r\n");
+            LOG_INF("LED ON");
+            //cliPrintf("LED ON\r\n");
         } else if (strcmp(argv[1], "off") == 0) {
             led_toggle_period = 0;
             ledOff();
-            cliPrintf("LED OFF\r\n");
+            LOG_INF("LED OFF");
+            //cliPrintf("LED OFF\r\n");
         } else if (strcmp(argv[1], "toggle") == 0) {
             if(argc == 3){
                 led_toggle_period=atoi(argv[2]);
                 if(led_toggle_period>0){
-                    cliPrintf("LED Auto-Toggled!!\r\n");
+                  LOG_INF("LED Auto-Toggled!!");
+                  //cliPrintf("LED Auto-Toggled!!\r\n");
                 }else{
-                    cliPrintf("Invalid Period\r\n");
+                  LOG_INF("Invalid Period");
+                  //cliPrintf("Invalid Period\r\n");
                 }
             }else{
                 led_toggle_period = 0;
@@ -218,6 +224,7 @@ void ledSystemTask(void *argument)
 {
   while (1){
     if(led_toggle_period > 0){
+      LOG_DBG("LED Toggle!");
       ledToggle();
       osDelay(led_toggle_period);
       //vTaskDelay(1000); // HALdelay는 시스템 전체를 멈추고 싶을 때
@@ -251,8 +258,18 @@ void StartDefaultTask(void *argument)
   }
 }
 
+void apStopAutoTask(void)
+{
+  led_toggle_period=0;
+  temp_read_period=0;
+  tempStopAuto();
+  ledOff();
+}
+
 void apInit(void) {
   hwInit();
+  cliSetCtrlCHandler(apStopAutoTask);
+  
   cliAdd("led", cliLed);
   cliAdd("info", cliInfo);
   cliAdd("sys", cliSys);
@@ -260,6 +277,8 @@ void apInit(void) {
   cliAdd("md", cliMd);
   cliAdd("button", cliButton);
   cliAdd("temp", cliTemp);
+
+  LOG_INF("Application Init... Started");
 }
 
 void apMain(void) {
@@ -272,9 +291,9 @@ void apMain(void) {
     // //ledSystemTaskHandle = osThreadNew(ledSystemTask, NULL, &ledSystemTask_attributes);
     // osThreadNew(ledSystemTask, NULL, &ledSystemTask_attributes);
     
-    uartPrintf(0, "LED Task Started!! \r\n");
+    //uartPrintf(0, "LED Task Started!! \r\n");
     
-    while (1) {
+    while (1) { 
 
     // HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
     // ledOff();

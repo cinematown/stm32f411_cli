@@ -1,5 +1,4 @@
 #include "cli.h"
-#include "uart.h"
 
 #define CLI_LINE_BUF_MAX 32
 #define CLI_CMD_LIST_MAX 32
@@ -32,6 +31,7 @@ typedef enum{
 }cli_input_state_t;
 
 static cli_input_state_t input_state = CLI_STATE_NORMAL;
+static cli_callback_t ctrl_c_handler = NULL;
 
 //Refactoring CLI function
 static void handleEnterKey(void)
@@ -131,6 +131,11 @@ void cliMain(void)
 
         switch (rx_data)
         {
+            case 0x03:
+                if(ctrl_c_handler!=NULL) ctrl_c_handler();
+                cliPrintf("^C \r\nCLI>");
+                cli_line_idx = 0;
+                break;
             case 0x1B: //esc
                 input_state = CLI_STATE_ESC_RCVD;
                 break;
@@ -149,87 +154,6 @@ void cliMain(void)
         }
     }
     
-}
-
-void cliMain_()
-{
-    // if(uartAvailable(0)>0){
-    //     uint8_t rx_data = uartRead(0);
-    //     if(esc_state == 0){
-
-    //         if(rx_data==0x1B) {
-    //             esc_state = 1;//27 esc
-    //         } 
-    //         else{
-    //             if((rx_data=='\r') || (rx_data=='\n')){
-    //                 cliPrintf("\r\n");
-    //                 cli_line_buf[cli_line_idx]='\0';
-    //                 //실행전 히스토리 버퍼에 복사
-    //                 strncpy(cli_history_buf[cli_hist_write], cli_line_buf, CLI_LINE_BUF_MAX-1);
-    //                 cli_hist_write=(cli_hist_write+1)%CLI_HIST_MAX;
-    //                 cli_hist_depth=0;
-    //                 if(cli_hist_count<CLI_HIST_MAX) cli_hist_count++;
-
-    //                 cliParseArgs(cli_line_buf);
-    //                 cliRunCommand();
-                    
-    //                 cliPrintf("CLI> ");
-    //                 cli_line_idx=0;
-    //             }
-    //             else if(rx_data=='\b' || rx_data==127){
-    //                 if(cli_line_idx>0){
-    //                     cli_line_idx--;
-    //                     cliPrintf("\b \b");
-    //                 }
-    //             }
-    //             else{
-    //                 cliPrintf("%c", rx_data);
-    //                 cli_line_buf[cli_line_idx++] = rx_data;
-    //                 if(cli_line_idx>=CLI_LINE_BUF_MAX)
-    //                     cli_line_idx = 0;
-    //             }
-    //         }
-            
-    //     }else if(esc_state == 1){
-    //         if(rx_data=='[') esc_state=2;
-    //         else esc_state=0;
-    //     }else if(esc_state == 2){
-    //         if(rx_data=='A'){
-    //             if(cli_hist_depth<cli_hist_count){
-    //                 cli_hist_depth++;
-    //                 for(uint16_t i=0; i<cli_line_idx; i++) cliPrintf("\b \b");
-                    
-    //                 int idx=(cli_hist_write+CLI_HIST_MAX-cli_hist_depth)%CLI_HIST_MAX;
-    //                 strncpy(cli_line_buf, cli_history_buf[idx], CLI_LINE_BUF_MAX-1);
-
-
-    //                 //strncpy(cli_line_buf, cli_history_buf, CLI_LINE_BUF_MAX-1);
-    //                 cli_line_idx = strlen(cli_line_buf);
-    //                 cliPrintf("%s", cli_line_buf);
-    //             }
-                
-    //         }
-    //         else if(rx_data=='B'){
-    //             if(cli_hist_depth>0){
-    //                 cli_hist_depth--;
-    //                 //기존 타이핑 지움
-    //                 for(uint16_t i=0; i<cli_line_idx; i++) cliPrintf("\b \b");
-                    
-    //                 if(cli_hist_depth==0){
-    //                     cli_line_buf[0] = '\0';
-    //                     cli_line_idx=0;
-    //                 }else{  //중간 깊이일 경우
-    //                     int idx=(cli_hist_write+CLI_HIST_MAX-cli_hist_depth)%CLI_HIST_MAX;
-    //                     strncpy(cli_line_buf, cli_history_buf[idx], CLI_LINE_BUF_MAX-1);
-    //                     cliPrintf("%s", cli_line_buf);
-    //                     cli_line_idx=strlen(cli_line_buf);
-    //                 }
-    //             }
-    //         }
-    //         esc_state = 0;
-            
-    //     }
-    // }
 }
 
 static void cliHelp (uint8_t argc, char* argv[])
@@ -261,11 +185,17 @@ void cliInit()
 {
     cli_cmd_count = 0;
     cli_line_idx = 0;
+    ctrl_c_handler = NULL;
 
     cliAdd("help", cliHelp);
     cliAdd("cls", cliClear);
+    cliAdd("log", cliLog);
 }
 
+void cliSetCtrlCHandler(cli_callback_t handler)
+{
+    ctrl_c_handler=handler;
+}
 
 void cliPrintf(const char *fmt, ...)
 {
