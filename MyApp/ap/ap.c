@@ -1,10 +1,8 @@
 #include "ap.h"
-#include "cli.h"
-#include "led.h"
+#include "monitor.h"
 
 static uint32_t led_toggle_period = 0;
 static uint32_t temp_read_period = 0;
-
 
 void cliLed(uint8_t argc, char **argv)
 {
@@ -224,11 +222,22 @@ void ledSystemTask(void *argument)
 {
   while (1){
     if(led_toggle_period > 0){
-      LOG_DBG("LED Toggle!");
       ledToggle();
+      bool led_status = ledGetStatus();
+
+      if(isMonitoringOn()){
+        monitorUpdateValue(ID_OUT_LED_STATE, TYPE_BOOL, &led_status);
+      }else{
+       LOG_DBG("LED Toggle!");
+      }
       osDelay(led_toggle_period);
       //vTaskDelay(1000); // HALdelay는 시스템 전체를 멈추고 싶을 때
-    }else{
+    }else
+    {
+      bool led_status = ledGetStatus();
+      if(isMonitoringOn()){
+        monitorUpdateValue(ID_OUT_LED_STATE, TYPE_BOOL, &led_status);
+      }
       osDelay(50); //cmsis 함수를 가급적 사용하려고
     }
   }
@@ -238,11 +247,41 @@ void tempSystemTask(void *argument)
 {
   while(1){
     if(temp_read_period > 0){
-      cliPrintf("Temperature: %.2f *C\r\n", tempReadAuto());
+      float t=tempReadAuto();
+
+      if(isMonitoringOn()){
+        monitorUpdateValue(ID_ENV_TEMP, TYPE_FLOAT, &t);
+      }else{
+        cliPrintf("Temperature: %.2f *C\r\n", t);
+      }
       osDelay(temp_read_period);
     }else{
       osDelay(50);
     }
+  }
+}
+
+void monitorSystemTask(void *argument)
+{
+  while(1)
+  {
+    if(isMonitoringOn()){
+        monitorSendPacket();
+        osDelay(monitorGetPeriod());
+    }else{
+      osDelay(10);
+    }
+  }
+}
+
+void apPeriodSyncTask(void)
+{
+  if(led_toggle_period > 0){
+    led_toggle_period = monitorGetPeriod();
+  }
+
+  if(temp_read_period > 0){
+    temp_read_period = monitorGetPeriod();
   }
 }
 
@@ -254,7 +293,6 @@ void StartDefaultTask(void *argument)
   for(;;)
   {
     apMain();
-    //osDelay(1); ???
   }
 }
 
@@ -268,7 +306,9 @@ void apStopAutoTask(void)
 
 void apInit(void) {
   hwInit();
+  monitorInit();
   cliSetCtrlCHandler(apStopAutoTask);
+  monitorSetSyncHandler(apPeriodSyncTask);
   
   cliAdd("led", cliLed);
   cliAdd("info", cliInfo);
@@ -282,6 +322,7 @@ void apInit(void) {
 }
 
 void apMain(void) {
+    /*
     //osThreadId_t ledSystemTaskHandle;
     // const osThreadAttr_t ledSystemTask_attributes = {
     //     .name = "ledSystemTask",
@@ -292,9 +333,9 @@ void apMain(void) {
     // osThreadNew(ledSystemTask, NULL, &ledSystemTask_attributes);
     
     //uartPrintf(0, "LED Task Started!! \r\n");
-    
+    */
     while (1) { 
-
+    /*
     // HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
     // ledOff();
     // HAL_Delay(1000);
@@ -310,8 +351,8 @@ void apMain(void) {
     //    uartPrintf(0, "%c", ch);
     //}
     // HAL_Delay(500);
-
-        cliMain();
-        osDelay(1); //task 시간을 양보
+    */
+      cliMain();
+      osDelay(1); //task 시간을 양보
     }
 }
